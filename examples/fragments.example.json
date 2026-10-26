@@ -1,0 +1,12 @@
+[
+  {
+    "category": "places",
+    "triggers": ["Harbour Room", "the Harbour Room"],
+    "definition": "The Harbour Room is a quiet fictional reading room with deep blue walls."
+  },
+  {
+    "category": "preferences",
+    "triggers": ["tea"],
+    "definition": "The user usually drinks tea without sugar."
+  }
+]

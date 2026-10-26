@@ -1,0 +1,55 @@
+{
+  "name": "ellivien-memfrags",
+  "version": "0.2.1",
+  "description": "An owner-editable, provider-neutral memory-fragment system that reuses a companion portal's existing private storage route.",
+  "main": "src/memory-fragment-utils.cjs",
+  "exports": {
+    ".": "./src/memory-fragment-utils.cjs",
+    "./server/live-store": "./src/server/live-memory-store.cjs",
+    "./browser/editor": "./src/browser/memfrags-editor.js"
+  },
+  "files": [
+    "src/",
+    "examples/",
+    "test/",
+    "scripts/build-release.cjs",
+    "scripts/capture-github-metrics.mjs",
+    "README.md",
+    "INSTALL-WITH-AI.md",
+    "FULL-SYSTEM-INSTALL.md",
+    "CHANGELOG.md",
+    "GITHUB-METRICS.md",
+    "RELEASE-ACCEPTANCE.md",
+    "SECURITY.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "metrics:capture": "node scripts/capture-github-metrics.mjs",
+    "package:release": "node scripts/build-release.cjs"
+  },
+  "keywords": [
+    "ai",
+    "companion",
+    "context",
+    "memory",
+    "open-source"
+  ],
+  "author": {
+    "name": "Ellivien",
+    "url": "https://github.com/ellivien"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellivien/ellivien-memfrags.git"
+  },
+  "homepage": "https://github.com/ellivien/ellivien-memfrags#readme",
+  "bugs": {
+    "url": "https://github.com/ellivien/ellivien-memfrags/issues"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  }
+}
