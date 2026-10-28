@@ -1,7 +1,7 @@
 {
   "name": "ellivien-memfrags",
   "version": "0.2.1",
-  "description": "An owner-editable, provider-neutral memory-fragment system that reuses a companion portal's existing private storage route.",
+  "description": "Live-editable memory fragments for Ellivien portals, with an advanced adapter path for other companion portals.",
   "main": "src/memory-fragment-utils.cjs",
   "exports": {
     ".": "./src/memory-fragment-utils.cjs",
@@ -10,6 +10,7 @@
   },
   "files": [
     "src/",
+    "integrations/",
     "examples/",
     "test/",
     "scripts/build-release.cjs",
@@ -25,7 +26,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "test": "node --test",
+    "test": "node --test --test-concurrency=1",
     "metrics:capture": "node scripts/capture-github-metrics.mjs",
     "package:release": "node scripts/build-release.cjs"
   },

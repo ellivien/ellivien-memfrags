@@ -1,0 +1,65 @@
+Cloudflare Worker memory-fragments route addition
+=================================================
+
+Merge this route into the existing Ellivien Worker's authenticated `/api/*`
+request handler. It assumes that the Worker already supplies `url`,
+`env.PORTAL_STORAGE` and `jsonResponse(...)`.
+
+This is not a complete Worker and does not create a Worker, namespace, binding
+or credential.
+
+if (url.pathname === '/api/memory-fragments') {
+  if (request.method === 'GET') {
+    const stored = await env.PORTAL_STORAGE.get('memory-fragments');
+    return jsonResponse(stored ? JSON.parse(stored) : { fragments: [] });
+  }
+
+  if (request.method === 'POST') {
+    let payload;
+    try {
+      payload = await request.json();
+    } catch {
+      return jsonResponse({ error: 'Memory fragments request must contain valid JSON.' }, 400);
+    }
+    if (!payload || !Array.isArray(payload.fragments)) {
+      return jsonResponse({ error: 'Memory fragments request must contain a fragments array.' }, 400);
+    }
+    const rawFragments = payload.fragments;
+    const seenTriggers = new Set();
+
+    const fragments = rawFragments.map((fragment, index) => {
+      const category = String(fragment?.category || '').trim();
+      const definition = String(fragment?.definition || '').trim();
+      const triggers = [];
+      const rowTriggerKeys = new Set();
+
+      (Array.isArray(fragment?.triggers) ? fragment.triggers : [])
+        .map(trigger => String(trigger || '').trim())
+        .filter(Boolean)
+        .forEach(trigger => {
+          const key = `${category.toLowerCase()}::${trigger.toLowerCase()}`;
+          if (rowTriggerKeys.has(key)) return;
+          rowTriggerKeys.add(key);
+          triggers.push(trigger);
+        });
+
+      if (!definition || triggers.length === 0) {
+        throw new Error(`Memory fragment ${index + 1} needs at least one trigger and a definition.`);
+      }
+
+      triggers.forEach(trigger => {
+        const key = `${category.toLowerCase()}::${trigger.toLowerCase()}`;
+        if (seenTriggers.has(key)) {
+          const categoryLabel = category ? ` in category "${category}"` : '';
+          throw new Error(`Duplicate memory-fragment trigger: ${trigger}${categoryLabel}`);
+        }
+        seenTriggers.add(key);
+      });
+
+      return { category, triggers, definition };
+    });
+
+    await env.PORTAL_STORAGE.put('memory-fragments', JSON.stringify({ fragments }));
+    return jsonResponse({ success: true, count: fragments.length });
+  }
+}

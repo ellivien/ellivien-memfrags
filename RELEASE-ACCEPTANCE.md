@@ -18,12 +18,17 @@ the repository.
 
 ## Required installation result
 
-The installer must:
+For the primary supported clean-room test, the copied portal must already have
+working Ellivien Cloudflare KV Sync and custom authentication. The installer
+must:
 
-- identify the portal's existing authentication, storage and model boundaries;
-- reuse the existing authenticated private storage route;
-- install the supplied editor, live-store adapter and matcher without creating
-  a dedicated MemFrags Worker, namespace, database, relay, account or secret;
+- identify the portal's existing authentication, Worker, `PORTAL_STORAGE`,
+  sync-proxy and model boundaries;
+- reuse the existing Worker, KV namespace, sync token and authenticated proxy;
+- add only the supplied `memory-fragments` route and storage key;
+- install the supplied editor, Ellivien store adapter and matcher without
+  creating a dedicated MemFrags Worker, namespace, database, relay, account or
+  secret;
 - keep fragments and credentials out of public source;
 - ask the owner before adding infrastructure if no suitable storage route exists;
 - leave the model, prompt, hosting and unrelated behaviour unchanged;
@@ -42,14 +47,20 @@ On an authenticated preview, the owner must be able to:
 7. send a message without a trigger and confirm that none is selected.
 
 Also confirm that an unauthenticated request cannot read or write the library,
-ordinary chat continues during a temporary storage failure and no new
-MemFrags-specific infrastructure was created.
+the same fragment appears on another authenticated device, ordinary chat
+continues during a temporary storage failure, existing thread sync still works
+and no new MemFrags-specific infrastructure was created.
 
 ## Failure rule
 
-Any missing instruction, insecure workaround, unnecessary new backend or
-reliance on knowledge outside the repository is a product failure. Repair the
-repository, reset the test portal and repeat the clean-room test.
+Any missing instruction, insecure workaround, unnecessary new backend,
+unverified claim or reliance on knowledge outside the repository is a product
+failure. A release also fails if source, history, workflow files or archives
+contain a real credential, account or namespace ID, Worker URL, unapproved
+email address, local path, private owner or companion name, prompt,
+conversation text or fragment. The public Ellivien GitHub noreply address is
+allowed only as Git author/committer attribution. Repair the repository, reset
+the test portal and repeat every audit.
 
 Do not publish a release until the complete test passes and the owner approves
 the release.

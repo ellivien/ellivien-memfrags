@@ -29,7 +29,7 @@ mkdirSync(releaseDirectory, { recursive: true });
 rmSync(archivePath, { force: true });
 rmSync(checksumPath, { force: true });
 
-const zip = spawnSync('zip', ['-q', '-D', '-r', archivePath, ...included, '-x', '*.DS_Store', '*/.DS_Store'], {
+const zip = spawnSync('zip', ['-q', '-X', '-D', '-r', archivePath, ...included, '-x', '*.DS_Store', '*/.DS_Store'], {
   cwd: ROOT,
   stdio: 'inherit',
 });

@@ -35,6 +35,20 @@
       ));
   }
 
+  function validateStoredRows(rows) {
+    if (!Array.isArray(rows) || !rows.every(row => (
+      row && typeof row === 'object' && !Array.isArray(row) &&
+      (row.category == null || typeof row.category === 'string') &&
+      Array.isArray(row.triggers) &&
+      row.triggers.every(trigger => typeof trigger === 'string') &&
+      uniqueTriggers(row.triggers).length > 0 &&
+      typeof row.definition === 'string' && Boolean(text(row.definition))
+    ))) {
+      throw new Error('MemFrags storage returned an invalid fragment library.');
+    }
+    return normaliseRows(rows);
+  }
+
   function element(tag, properties = {}, style = '') {
     const node = document.createElement(tag);
     Object.assign(node, properties);
@@ -57,9 +71,22 @@
         headers: { ...getHeaders(), ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}) },
         body: method === 'POST' ? JSON.stringify({ fragments: submitted }) : undefined
       });
-      const data = await response.json().catch(() => ({}));
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('MemFrags storage returned invalid JSON.');
+      }
       if (!response.ok) throw new Error(data.error || `MemFrags request failed: ${response.status}`);
-      return Array.isArray(data.fragments) ? normaliseRows(data.fragments) : submitted;
+      if (method === 'GET') {
+        return validateStoredRows(data.fragments);
+      }
+      if (data.success === false) {
+        throw new Error('MemFrags storage did not confirm that the library was saved.');
+      }
+      if (Array.isArray(data.fragments)) return validateStoredRows(data.fragments);
+      if (data.success === true) return submitted;
+      throw new Error('MemFrags storage did not confirm that the library was saved.');
     };
 
     const overlay = element('div', { id: 'ellivien-memfrags-modal' }, 'position:fixed;inset:0;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;z-index:10000;padding:12px;box-sizing:border-box;');
@@ -83,6 +110,7 @@
     const save = element('button', { type: 'button', textContent: 'Save live' }, `padding:10px 16px;border:0;border-radius:10px;background:${accent};color:#fff;font-weight:800;`);
     let rows = [];
     let categoryFilter = 'all';
+    let editingLocked = true;
 
     function setStatus(message, kind = 'neutral') {
       status.textContent = message;
@@ -118,10 +146,10 @@
       visible.forEach(row => {
         const card = element('div', {}, 'display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:7px;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;');
         const fields = element('div', {}, 'display:grid;gap:7px;min-width:0;');
-        const category = element('input', { value: row.category || '', placeholder: 'Category (optional)', ariaLabel: 'Category' }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font-size:16px;');
-        const triggers = element('textarea', { value: (row.triggers || []).join(', '), placeholder: 'Triggers, separated by commas', rows: 1, ariaLabel: 'Triggers' }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font:16px/1.35 system-ui,sans-serif;resize:vertical;');
-        const definition = element('textarea', { value: row.definition || '', placeholder: 'What the companion should remember', rows: 3, ariaLabel: 'Definition' }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font:16px/1.35 system-ui,sans-serif;resize:vertical;');
-        const remove = element('button', { type: 'button', textContent: '×', title: 'Delete fragment', ariaLabel: 'Delete memory fragment' }, 'width:42px;height:42px;border:0;border-radius:9px;background:#fef2f2;color:#991b1b;font-size:24px;');
+        const category = element('input', { value: row.category || '', placeholder: 'Category (optional)', ariaLabel: 'Category', disabled: editingLocked }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font-size:16px;');
+        const triggers = element('textarea', { value: (row.triggers || []).join(', '), placeholder: 'Triggers, separated by commas', rows: 1, ariaLabel: 'Triggers', disabled: editingLocked }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font:16px/1.35 system-ui,sans-serif;resize:vertical;');
+        const definition = element('textarea', { value: row.definition || '', placeholder: 'What the companion should remember', rows: 3, ariaLabel: 'Definition', disabled: editingLocked }, 'width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:9px;font:16px/1.35 system-ui,sans-serif;resize:vertical;');
+        const remove = element('button', { type: 'button', textContent: '×', title: 'Delete fragment', ariaLabel: 'Delete memory fragment', disabled: editingLocked }, 'width:42px;height:42px;border:0;border-radius:9px;background:#fef2f2;color:#991b1b;font-size:24px;');
         category.oninput = () => { row.category = category.value; };
         triggers.oninput = () => { row.triggers = triggers.value.split(',').map(text).filter(Boolean); };
         definition.oninput = () => { row.definition = definition.value; };
@@ -140,13 +168,28 @@
       if (!visible.length) list.appendChild(element('p', { textContent: rows.length ? 'No matching memory fragments.' : 'No memory fragments yet. Add the first one below.' }, 'color:#6b7280;text-align:center;padding:20px;'));
     }
 
+    function setEditingLocked(locked) {
+      editingLocked = Boolean(locked);
+      add.disabled = editingLocked;
+      save.disabled = editingLocked;
+      render();
+    }
+
     search.oninput = render;
     clear.onclick = () => { search.value = ''; categoryFilter = 'all'; render(); };
-    add.onclick = () => { rows.push({ category: '', triggers: [], definition: '' }); categoryFilter = 'all'; search.value = ''; render(); list.scrollTop = list.scrollHeight; };
+    add.onclick = () => {
+      if (editingLocked) return;
+      rows.push({ category: '', triggers: [], definition: '' });
+      categoryFilter = 'all';
+      search.value = '';
+      render();
+      list.scrollTop = list.scrollHeight;
+    };
     close.onclick = () => overlay.remove();
     overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
     global.addEventListener('keydown', event => { if (event.key === 'Escape' && overlay.isConnected) overlay.remove(); }, { once: true });
     save.onclick = async () => {
+      if (editingLocked) return;
       const incomplete = rows.find(row => !uniqueTriggers(row.triggers).length || !text(row.definition));
       if (incomplete) return setStatus('Each row needs at least one trigger and a definition. Complete it or delete it before saving.', 'error');
       const fragments = normaliseRows(rows);
@@ -158,7 +201,7 @@
           seen.add(key);
         }
       }
-      save.disabled = true;
+      setEditingLocked(true);
       save.textContent = 'Saving…';
       try {
         rows = await request('POST', fragments);
@@ -168,7 +211,7 @@
       } catch (error) {
         setStatus(error.message || 'Could not save memory fragments.', 'error');
       } finally {
-        save.disabled = false;
+        setEditingLocked(false);
         save.textContent = 'Save live';
       }
     };
@@ -178,14 +221,15 @@
     modal.append(title, status, searchRow, categories, list, add, footer);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    setEditingLocked(true);
 
     try {
       rows = normaliseRows(await request('GET'));
-      render();
+      setEditingLocked(false);
       setStatus(`${rows.length} memory fragment${rows.length === 1 ? '' : 's'} loaded.`, 'success');
     } catch (error) {
-      render();
-      setStatus(error.message || 'Could not load memory fragments.', 'error');
+      setEditingLocked(true);
+      setStatus(`${error.message || 'Could not load memory fragments.'} Editing is locked to protect the saved library. Close and try again.`, 'error');
     }
     return overlay;
   }

@@ -1,4 +1,15 @@
-# Install Ellivien MemFrags into an existing portal
+# Advanced: adapt Ellivien MemFrags to another portal
+
+The complete, field-tested installation supplied by Ellivien targets existing
+Ellivien portals and is documented in
+`integrations/ellivien-portal/README.md`. Use this guide only when adapting the
+matching engine and editor to a different portal architecture or storage
+provider.
+
+This is engineering work. Do not imply that an untested portal or backend is
+supported unchanged, and do not replace the Ellivien integration with this
+generic route when the portal already has the Ellivien Cloudflare KV Sync
+foundation.
 
 Use this provider-neutral integration pattern:
 
@@ -18,8 +29,8 @@ and injects only the relevant definitions
 
 MemFrags does not require a dedicated storage service, namespace, serverless
 function or second set of credentials. Reuse the portal's existing authenticated
-storage path. Do not provision another backend merely because MemFrags has been
-added.
+storage path where it has one. If it does not, stop and obtain the owner's
+explicit architectural choice before adding infrastructure.
 
 ## What the package supplies
 

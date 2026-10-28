@@ -2,32 +2,38 @@
 
 ## 0.2.1
 
-Corrected the installation architecture so MemFrags reuses an adopter's
-existing authenticated private storage rather than prescribing a second backend.
+Packaged the field-tested Ellivien live-modal architecture used in the GPT-4o
+Memory Fragments guide, while retaining an advanced adaptation path for other
+portal architectures.
 
 ### Changed
 
-- The editor now requires adopters to pass their own authenticated storage route
-  explicitly instead of assuming a production path.
-- The model-side loader now accepts the portal's existing private load and save
-  functions instead of assuming a hosting provider.
+- The primary installation now reuses an Ellivien portal's existing Cloudflare
+  Worker, `PORTAL_STORAGE` KV binding, sync token and authenticated proxy.
+- The included Worker route stores the live library under the
+  `memory-fragments` key without creating another backend.
+- The included Ellivien server adapter loads the same private library for
+  server-side model injection with a 60-second cache and safe fallback.
+- The editor accepts the existing authenticated Cloudflare proxy route
+  explicitly and does not expose the Worker bearer token.
 - The editor supports a common store contract where `GET` returns the
   fragments and a successful `POST` returns only `{ success, count }`.
 - The server-side live store also retains submitted canonical rows when an
   existing save callback returns that acknowledgement-only shape.
 - A provider-neutral example connects server-side model functions to an existing
   private HTTP store without creating another service, namespace or credential.
-- Installation instructions require the coding AI to inspect and reuse the
-  portal's existing authenticated storage.
-- If no suitable private storage route exists, the installer must stop and ask
-  the owner before adding infrastructure.
+- Installation instructions identify Ellivien portals as the best-supported
+  target and require the coding AI to preserve their existing infrastructure.
+- Other portal and storage architectures are clearly described as advanced
+  adaptations requiring their own engineering and end-to-end tests.
 
-### Removed
+### Prohibited
 
-- the dedicated MemFrags storage service;
-- the dedicated namespace configuration;
-- the separate MemFrags hosting-provider proxy;
-- MemFrags-specific storage credentials and session adapter;
-- instructions that made a separate provider-specific system mandatory.
+- a dedicated MemFrags Worker or storage service;
+- a second KV namespace or database;
+- MemFrags-specific storage credentials;
+- production identifiers, private names, fragments or credentials in public
+  examples and release artefacts.
 
-No provider matching behaviour or owner-facing editing capability was removed.
+The matching core remains portable for experienced adopters, but the complete
+documented default is the proven Ellivien portal route.

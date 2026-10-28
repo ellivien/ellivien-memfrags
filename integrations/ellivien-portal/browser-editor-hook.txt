@@ -1,0 +1,14 @@
+Load `src/browser/memfrags-editor.js` in the authenticated Ellivien portal,
+then merge this call into the portal's existing Memory fragments button.
+
+It deliberately reuses `CLOUDFLARE_WORKER_BASE_URL` and
+`buildPortalAuthHeaders()` from the existing Ellivien Cloudflare sync and
+authentication foundation.
+
+function showMemoryFragmentsEditor() {
+  return window.EllivienMemFragsEditor.show({
+    apiUrl: `${CLOUDFLARE_WORKER_BASE_URL}/api/memory-fragments`,
+    getHeaders: () => buildPortalAuthHeaders(),
+    onSaved: () => showSyncToast?.('Memory fragments saved live.')
+  });
+}
