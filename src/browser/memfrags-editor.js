@@ -5,6 +5,29 @@
 (function attachEllivienMemFragsEditor(global) {
   'use strict';
 
+  const pendingSaves = new Map();
+  const owns = (value, key) => Boolean(
+    value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, key)
+  );
+
+  function reportedError(value) {
+    if (!owns(value, 'error')) return '';
+    if (typeof value.error === 'string') return value.error.trim();
+    return value.error ? 'MemFrags storage reported an error.' : '';
+  }
+
+  function validateResponseCount(value, expected) {
+    if (owns(value, 'count') && (!Number.isInteger(value.count) || value.count !== expected)) {
+      throw new Error('MemFrags storage returned a contradictory saved-fragment count.');
+    }
+  }
+
+  function validateSuccessFlag(value) {
+    if (owns(value, 'success') && typeof value.success !== 'boolean') {
+      throw new Error('MemFrags storage returned an invalid success flag.');
+    }
+  }
+
   function text(value) {
     return String(value || '').trim();
   }
@@ -62,7 +85,17 @@
     const getHeaders = options.getHeaders || (() => ({}));
     const accent = options.accent || '#7c3aed';
     const existing = document.getElementById('ellivien-memfrags-modal');
-    if (existing) existing.remove();
+    if (pendingSaves.size) {
+      if (existing) return existing;
+      await Promise.allSettled([...pendingSaves.values()]);
+    }
+    if (existing) {
+      if (typeof existing.__ellivienMemFragsRemove === 'function') {
+        existing.__ellivienMemFragsRemove();
+      } else {
+        existing.remove();
+      }
+    }
 
     const request = async (method, fragments) => {
       const submitted = method === 'POST' ? normaliseRows(fragments) : [];
@@ -77,15 +110,29 @@
       } catch {
         throw new Error('MemFrags storage returned invalid JSON.');
       }
-      if (!response.ok) throw new Error(data.error || `MemFrags request failed: ${response.status}`);
+      if (!response.ok) throw new Error(data?.error || `MemFrags request failed: ${response.status}`);
+      validateSuccessFlag(data);
+      const storageError = reportedError(data);
+      if (data?.success === false || storageError) {
+        throw new Error(storageError || (method === 'GET'
+          ? 'MemFrags storage did not return the saved library.'
+          : 'MemFrags storage did not confirm that the library was saved.'));
+      }
       if (method === 'GET') {
-        return validateStoredRows(data.fragments);
+        const loaded = validateStoredRows(data.fragments);
+        validateResponseCount(data, loaded.length);
+        return loaded;
       }
-      if (data.success === false) {
-        throw new Error('MemFrags storage did not confirm that the library was saved.');
+
+      if (owns(data, 'fragments')) {
+        const saved = validateStoredRows(data.fragments);
+        validateResponseCount(data, saved.length);
+        return saved;
       }
-      if (Array.isArray(data.fragments)) return validateStoredRows(data.fragments);
-      if (data.success === true) return submitted;
+      if (data?.success === true) {
+        validateResponseCount(data, submitted.length);
+        return submitted;
+      }
       throw new Error('MemFrags storage did not confirm that the library was saved.');
     };
 
@@ -111,6 +158,7 @@
     let rows = [];
     let categoryFilter = 'all';
     let editingLocked = true;
+    let saving = false;
 
     function setStatus(message, kind = 'neutral') {
       status.textContent = message;
@@ -185,9 +233,27 @@
       render();
       list.scrollTop = list.scrollHeight;
     };
-    close.onclick = () => overlay.remove();
-    overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
-    global.addEventListener('keydown', event => { if (event.key === 'Escape' && overlay.isConnected) overlay.remove(); }, { once: true });
+    function removeOverlay() {
+      global.removeEventListener?.('keydown', handleKeydown);
+      overlay.remove();
+    }
+
+    function tryClose() {
+      if (saving) {
+        setStatus('Wait for the live save to finish before closing.', 'neutral');
+        return;
+      }
+      removeOverlay();
+    }
+
+    function handleKeydown(event) {
+      if (event.key === 'Escape' && overlay.isConnected) tryClose();
+    }
+
+    overlay.__ellivienMemFragsRemove = removeOverlay;
+    close.onclick = tryClose;
+    overlay.onclick = event => { if (event.target === overlay) tryClose(); };
+    global.addEventListener('keydown', handleKeydown);
     save.onclick = async () => {
       if (editingLocked) return;
       const incomplete = rows.find(row => !uniqueTriggers(row.triggers).length || !text(row.definition));
@@ -202,15 +268,20 @@
         }
       }
       setEditingLocked(true);
+      saving = true;
       save.textContent = 'Saving…';
+      const saveOperation = request('POST', fragments);
+      pendingSaves.set(apiUrl, saveOperation);
       try {
-        rows = await request('POST', fragments);
+        rows = await saveOperation;
         render();
         setStatus('Memory fragments saved live. You can keep editing or close when finished.', 'success');
         if (typeof options.onSaved === 'function') options.onSaved(rows);
       } catch (error) {
         setStatus(error.message || 'Could not save memory fragments.', 'error');
       } finally {
+        if (pendingSaves.get(apiUrl) === saveOperation) pendingSaves.delete(apiUrl);
+        saving = false;
         setEditingLocked(false);
         save.textContent = 'Save live';
       }

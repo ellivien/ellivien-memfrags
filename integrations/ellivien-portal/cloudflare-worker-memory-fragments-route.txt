@@ -9,32 +9,32 @@ This is not a complete Worker and does not create a Worker, namespace, binding
 or credential.
 
 if (url.pathname === '/api/memory-fragments') {
-  if (request.method === 'GET') {
-    const stored = await env.PORTAL_STORAGE.get('memory-fragments');
-    return jsonResponse(stored ? JSON.parse(stored) : { fragments: [] });
-  }
-
-  if (request.method === 'POST') {
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return jsonResponse({ error: 'Memory fragments request must contain valid JSON.' }, 400);
+  function normaliseMemoryFragments(rawFragments) {
+    if (!Array.isArray(rawFragments)) {
+      throw new Error('Memory fragments request must contain a fragments array.');
     }
-    if (!payload || !Array.isArray(payload.fragments)) {
-      return jsonResponse({ error: 'Memory fragments request must contain a fragments array.' }, 400);
-    }
-    const rawFragments = payload.fragments;
     const seenTriggers = new Set();
+    return rawFragments.map((fragment, index) => {
+      if (!fragment || typeof fragment !== 'object' || Array.isArray(fragment)) {
+        throw new Error(`Memory fragment ${index + 1} must be an object.`);
+      }
+      if (fragment.category != null && typeof fragment.category !== 'string') {
+        throw new Error(`Memory fragment ${index + 1} category must be a string.`);
+      }
+      if (typeof fragment.definition !== 'string') {
+        throw new Error(`Memory fragment ${index + 1} definition must be a string.`);
+      }
+      if (!Array.isArray(fragment.triggers) ||
+          !fragment.triggers.every(trigger => typeof trigger === 'string')) {
+        throw new Error(`Memory fragment ${index + 1} triggers must be an array of strings.`);
+      }
 
-    const fragments = rawFragments.map((fragment, index) => {
-      const category = String(fragment?.category || '').trim();
-      const definition = String(fragment?.definition || '').trim();
+      const category = (fragment.category || '').trim();
+      const definition = fragment.definition.trim();
       const triggers = [];
       const rowTriggerKeys = new Set();
-
-      (Array.isArray(fragment?.triggers) ? fragment.triggers : [])
-        .map(trigger => String(trigger || '').trim())
+      fragment.triggers
+        .map(trigger => trigger.trim())
         .filter(Boolean)
         .forEach(trigger => {
           const key = `${category.toLowerCase()}::${trigger.toLowerCase()}`;
@@ -58,8 +58,43 @@ if (url.pathname === '/api/memory-fragments') {
 
       return { category, triggers, definition };
     });
+  }
 
-    await env.PORTAL_STORAGE.put('memory-fragments', JSON.stringify({ fragments }));
+  if (request.method === 'GET') {
+    let stored;
+    try {
+      stored = await env.PORTAL_STORAGE.get('memory-fragments');
+    } catch {
+      return jsonResponse({ error: 'Stored memory fragments could not be read.' }, 500);
+    }
+    if (stored === null) return jsonResponse({ fragments: [] });
+    try {
+      const parsed = JSON.parse(stored);
+      return jsonResponse({ fragments: normaliseMemoryFragments(parsed?.fragments) });
+    } catch {
+      return jsonResponse({ error: 'Stored memory fragments are invalid.' }, 500);
+    }
+  }
+
+  if (request.method === 'POST') {
+    let payload;
+    try {
+      payload = await request.json();
+    } catch {
+      return jsonResponse({ error: 'Memory fragments request must contain valid JSON.' }, 400);
+    }
+    let fragments;
+    try {
+      fragments = normaliseMemoryFragments(payload?.fragments);
+    } catch (error) {
+      return jsonResponse({ error: error.message || 'Memory fragments are invalid.' }, 400);
+    }
+
+    try {
+      await env.PORTAL_STORAGE.put('memory-fragments', JSON.stringify({ fragments }));
+    } catch {
+      return jsonResponse({ error: 'Memory fragments could not be saved.' }, 500);
+    }
     return jsonResponse({ success: true, count: fragments.length });
   }
 }

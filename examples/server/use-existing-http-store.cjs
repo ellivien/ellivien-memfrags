@@ -4,6 +4,30 @@
 
 const { createLiveMemoryStore } = require('../../src/server/live-memory-store.cjs');
 
+function owns(value, key) {
+  return Boolean(
+    value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, key)
+  );
+}
+
+function reportedError(value) {
+  if (!owns(value, 'error')) return '';
+  if (typeof value.error === 'string') return value.error.trim();
+  return value.error ? 'Existing memory store reported an error.' : '';
+}
+
+function validateResponseCount(value, expected) {
+  if (owns(value, 'count') && (!Number.isInteger(value.count) || value.count !== expected)) {
+    throw new Error('Existing memory store returned a contradictory saved-fragment count.');
+  }
+}
+
+function validateSuccessFlag(value) {
+  if (owns(value, 'success') && typeof value.success !== 'boolean') {
+    throw new Error('Existing memory store returned an invalid success flag.');
+  }
+}
+
 function validateFragmentRows(rows) {
   if (!Array.isArray(rows) || !rows.every(row => (
     row && typeof row === 'object' && !Array.isArray(row) &&
@@ -42,19 +66,32 @@ function createExistingHttpMemoryStore(options = {}) {
     } catch {
       throw new Error('Existing memory store returned invalid JSON.');
     }
-    if (!response.ok) throw new Error(data.error || `Existing memory store returned ${response.status}`);
+    if (!response.ok) throw new Error(data?.error || `Existing memory store returned ${response.status}`);
+    validateSuccessFlag(data);
+    const storageError = reportedError(data);
+    if (data?.success === false || storageError) {
+      throw new Error(storageError || (method === 'GET'
+        ? 'Existing memory store did not return the saved library.'
+        : 'Existing memory store did not confirm that the library was saved.'));
+    }
 
     if (method === 'GET') {
-      return validateFragmentRows(data.fragments);
+      const loaded = validateFragmentRows(data.fragments);
+      validateResponseCount(data, loaded.length);
+      return loaded;
     }
 
     // Some stores acknowledge a successful save without repeating the rows.
     // In that case, retain the canonical rows that were just submitted.
-    if (data.success === false) {
-      throw new Error('Existing memory store did not confirm that the library was saved.');
+    if (owns(data, 'fragments')) {
+      const saved = validateFragmentRows(data.fragments);
+      validateResponseCount(data, saved.length);
+      return saved;
     }
-    if (Array.isArray(data.fragments)) return validateFragmentRows(data.fragments);
-    if (data.success === true) return fragments;
+    if (data?.success === true) {
+      validateResponseCount(data, fragments.length);
+      return fragments;
+    }
     throw new Error('Existing memory store did not confirm that the library was saved.');
   }
 

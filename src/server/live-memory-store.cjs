@@ -4,6 +4,38 @@
 
 const { normaliseFragments } = require('../memory-fragment-utils.cjs');
 
+function owns(value, key) {
+  return Boolean(
+    value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, key)
+  );
+}
+
+function reportedError(value) {
+  if (!owns(value, 'error')) return '';
+  if (typeof value.error === 'string') return value.error.trim();
+  return value.error ? 'saveFragments() reported an error' : '';
+}
+
+function validateSavedCount(result, expected) {
+  if (owns(result, 'count') && (!Number.isInteger(result.count) || result.count !== expected)) {
+    throw new Error('saveFragments() returned a contradictory saved-fragment count');
+  }
+}
+
+function validateSuccessFlag(value) {
+  if (owns(value, 'success') && typeof value.success !== 'boolean') {
+    throw new Error('saveFragments() returned an invalid success flag');
+  }
+}
+
+function copyFragments(fragments) {
+  return fragments.map(fragment => ({
+    category: fragment.category,
+    triggers: [...fragment.triggers],
+    definition: fragment.definition
+  }));
+}
+
 function normaliseStoredRows(rows, source) {
   if (!Array.isArray(rows) || !rows.every(row => (
     row && typeof row === 'object' && !Array.isArray(row) &&
@@ -23,6 +55,9 @@ function createLiveMemoryStore(options = {}) {
   const saveFragments = options.saveFragments;
   const cacheTtlMs = Number.isFinite(options.cacheTtlMs) ? options.cacheTtlMs : 60_000;
   let cache = { loadedAt: 0, fragments: [] };
+  let cacheRevision = 0;
+  let latestLoad = 0;
+  let saveQueue = Promise.resolve();
 
   if (typeof loadFragments !== 'function') {
     throw new Error('loadFragments() is required and must use the portal\'s existing private storage route');
@@ -30,14 +65,19 @@ function createLiveMemoryStore(options = {}) {
 
   return {
     async load({ force = false } = {}) {
-      if (!force && Date.now() - cache.loadedAt < cacheTtlMs) return cache.fragments;
+      if (!force && Date.now() - cache.loadedAt < cacheTtlMs) return copyFragments(cache.fragments);
+      const loadId = ++latestLoad;
+      const startingRevision = cacheRevision;
       try {
         const fragments = normaliseStoredRows(await loadFragments(), 'loadFragments()');
-        cache = { loadedAt: Date.now(), fragments };
-        return fragments;
+        if (cacheRevision === startingRevision && loadId === latestLoad) {
+          cache = { loadedAt: Date.now(), fragments: copyFragments(fragments) };
+          cacheRevision += 1;
+        }
+        return copyFragments(cache.fragments);
       } catch (error) {
         if (typeof options.onLoadError === 'function') options.onLoadError(error);
-        return cache.fragments;
+        return copyFragments(cache.fragments);
       }
     },
 
@@ -46,26 +86,36 @@ function createLiveMemoryStore(options = {}) {
         throw new Error('This adapter is read-only because saveFragments() was not supplied');
       }
       const normalised = normaliseFragments(fragments);
-      const result = await saveFragments(normalised);
-      if (result?.success === false) {
-        throw new Error('saveFragments() did not confirm that the library was saved');
-      }
-      let saved;
-      if (Array.isArray(result?.fragments)) {
-        saved = normaliseStoredRows(result.fragments, 'saveFragments()');
-      } else if (Array.isArray(result)) {
-        saved = normaliseStoredRows(result, 'saveFragments()');
-      } else if (result?.success === true) {
-        saved = normalised;
-      } else {
-        throw new Error('saveFragments() did not confirm that the library was saved');
-      }
-      cache = { loadedAt: Date.now(), fragments: saved };
-      return saved;
+      const operation = saveQueue.then(async () => {
+        const result = await saveFragments(copyFragments(normalised));
+        validateSuccessFlag(result);
+        const saveError = reportedError(result);
+        if (result?.success === false || saveError) {
+          throw new Error(saveError || 'saveFragments() did not confirm that the library was saved');
+        }
+        let saved;
+        if (owns(result, 'fragments')) {
+          saved = normaliseStoredRows(result.fragments, 'saveFragments()');
+          validateSavedCount(result, saved.length);
+        } else if (Array.isArray(result)) {
+          saved = normaliseStoredRows(result, 'saveFragments()');
+        } else if (result?.success === true) {
+          saved = normalised;
+          validateSavedCount(result, saved.length);
+        } else {
+          throw new Error('saveFragments() did not confirm that the library was saved');
+        }
+        cache = { loadedAt: Date.now(), fragments: copyFragments(saved) };
+        cacheRevision += 1;
+        return copyFragments(cache.fragments);
+      });
+      saveQueue = operation.catch(() => {});
+      return operation;
     },
 
     clearCache() {
       cache = { loadedAt: 0, fragments: [] };
+      cacheRevision += 1;
     }
   };
 }
