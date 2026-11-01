@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-11-01T08:38:01.412Z",
+  "repository": "ellivien/ellivien-memfrags",
+  "source": {
+    "provider": "GitHub REST API",
+    "aggregateOnly": true,
+    "trafficWindowDays": 14,
+    "note": "GitHub traffic is a rolling 14-day window. Overlapping snapshots preserve the history without identifying visitors."
+  },
+  "repositoryTotals": {
+    "stars": 0,
+    "forks": 0,
+    "openIssuesAndPullRequests": 0
+  },
+  "traffic": {
+    "views": {
+      "count": 4,
+      "uniques": 3,
+      "views": [
+        {
+          "timestamp": "2026-10-18T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-19T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-20T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-21T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-22T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-23T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-24T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-25T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-26T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-27T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-28T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-29T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-30T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-31T00:00:00Z",
+          "count": 4,
+          "uniques": 3
+        }
+      ]
+    },
+    "clones": {
+      "count": 16,
+      "uniques": 12,
+      "clones": [
+        {
+          "timestamp": "2026-10-18T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-19T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-20T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-21T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-22T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-23T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-24T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-25T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-26T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-27T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-28T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-29T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-30T00:00:00Z",
+          "count": 0,
+          "uniques": 0
+        },
+        {
+          "timestamp": "2026-10-31T00:00:00Z",
+          "count": 16,
+          "uniques": 12
+        }
+      ]
+    },
+    "topReferrers": [
+      {
+        "referrer": "github.com",
+        "count": 1,
+        "uniques": 1
+      }
+    ],
+    "popularPaths": [
+      {
+        "path": "/ellivien/ellivien-memfrags",
+        "title": "Overview",
+        "count": 4,
+        "uniques": 3
+      }
+    ]
+  },
+  "releases": [
+    {
+      "tagName": "v0.2.1",
+      "name": "Ellivien MemFrags v0.2.1",
+      "draft": false,
+      "prerelease": false,
+      "publishedAt": "2026-10-31T07:26:13Z",
+      "url": "https://github.com/ellivien/ellivien-memfrags/releases/tag/v0.2.1",
+      "assets": [
+        {
+          "name": "ellivien-memfrags-v0.2.1.zip",
+          "size": 45846,
+          "contentType": "application/zip",
+          "downloadCount": 0,
+          "updatedAt": "2026-10-31T07:26:13Z",
+          "downloadUrl": "https://github.com/ellivien/ellivien-memfrags/releases/download/v0.2.1/ellivien-memfrags-v0.2.1.zip"
+        },
+        {
+          "name": "ellivien-memfrags-v0.2.1.zip.sha256",
+          "size": 95,
+          "contentType": "application/octet-stream",
+          "downloadCount": 0,
+          "updatedAt": "2026-10-31T07:26:13Z",
+          "downloadUrl": "https://github.com/ellivien/ellivien-memfrags/releases/download/v0.2.1/ellivien-memfrags-v0.2.1.zip.sha256"
+        }
+      ]
+    }
+  ],
+  "releaseAssetDownloadTotal": 0,
+  "releasePackageDownloadTotal": 0
+}
